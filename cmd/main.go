@@ -2,6 +2,7 @@ package main
 
 import "fmt"
 
+
 func main() {
-    fmt.Printf("Extendible hashing in golang\n")
+    fmt.Println("Hello, world")
 }

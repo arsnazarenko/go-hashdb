@@ -1,3 +1,3 @@
-module github.com/arsnazarenko/hashdb
+module github.com/arsnazarenko/go-hashdb
 
-go 1.22.5
+go 1.22.4
