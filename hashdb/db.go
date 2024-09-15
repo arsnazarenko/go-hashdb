@@ -1,7 +1,7 @@
 package hashdb
 
 
-type HashDB interface {
+type DB interface {
 	Close() error
 	Put(key, value string) error
 	Get(key string) (string, error)
