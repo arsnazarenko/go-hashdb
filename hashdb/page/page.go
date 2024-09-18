@@ -23,19 +23,17 @@ const (
 var errKeyNotFound error = errors.New("page.Get: key not found")
 var errPageIsFull error = errors.New("page.Put: page is full")
 
-type Page struct {
-	m []byte
-}
+type Page []byte
 
 func PageFrom(mem []byte) Page {
     util.Assert(len(mem) >= PAGE_SIZE, "page.PageFrom: len underlying memory of Page should be greater or equal 4096")
-    p := Page{m: mem}
+    p := Page(mem)
     util.Assert(p.Use() <= PAGE_LOCAL_DEPTH_OFFSET, "page.PageFrom: max len of page payload is 4092")
    return p 
 }
 
 func (p Page) Use() uint {
-	return uint(binary.LittleEndian.Uint16(p.m[PAGE_USE_OFFSET:]))
+	return uint(binary.LittleEndian.Uint16(p[PAGE_USE_OFFSET:]))
 }
 
 func (p Page) rest() uint {
@@ -43,11 +41,11 @@ func (p Page) rest() uint {
 }
 
 func (p Page) ld() uint {
-	return uint(binary.LittleEndian.Uint16(p.m[PAGE_LOCAL_DEPTH_OFFSET:]))
+	return uint(binary.LittleEndian.Uint16(p[PAGE_LOCAL_DEPTH_OFFSET:]))
 }
 
 func (p Page) setLd(ld uint16) {
-	binary.LittleEndian.PutUint16(p.m[PAGE_LOCAL_DEPTH_OFFSET:], ld)
+	binary.LittleEndian.PutUint16(p[PAGE_LOCAL_DEPTH_OFFSET:], ld)
 }
 
 func (p Page) Get(key string) (string, error) {
@@ -72,9 +70,9 @@ func (p Page) Put(key, value string) error {
 	payload := uint(len(key) + len(value) + record.RECORD_TOTAL_HEADER_SZ)
 	if p.rest() >= payload {
 		use := p.Use()
-		r := record.RecordFrom(p.m[use : use+payload])
+		r := record.RecordFrom(p[use : use+payload])
 		r.Write(key, value)
-		binary.LittleEndian.PutUint16(p.m[PAGE_USE_OFFSET:], uint16(use+payload))
+		binary.LittleEndian.PutUint16(p[PAGE_USE_OFFSET:], uint16(use+payload))
 		return nil
 	}
 	return errPageIsFull

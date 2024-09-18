@@ -21,45 +21,41 @@ const (
 	RECORD_TOTAL_HEADER_SZ = RECORD_KEY_LEN_SZ + RECORD_VAL_LEN_SZ // Total size of the record header
 )
 
-type Record struct {
-	m []byte
-}
+type Record []byte
 
 func RecordFrom(mem []byte) Record {
     util.Assert(len(mem) > RECORD_TOTAL_HEADER_SZ, "record.RecordFrom: len of underlying memory of Record should be greater than Record header size")
-	return Record{
-		m: mem,
-	}
+	return Record(mem)
 }
 
 func (r Record) Key() []byte {
-	l := len(r.m)
+	l := len(r)
 	key_start_idx := l - RECORD_TOTAL_HEADER_SZ - int(r.ValueLen()) - int(r.KeyLen())
 	key_end_idx := l - RECORD_TOTAL_HEADER_SZ - int(r.ValueLen())
-	return r.m[key_start_idx:key_end_idx]
+	return r[key_start_idx:key_end_idx]
 }
 
 func (r Record) Value() []byte {
-	l := len(r.m)
-	return r.m[l-RECORD_TOTAL_HEADER_SZ-int(r.ValueLen()) : l-RECORD_TOTAL_HEADER_SZ]
+	l := len(r)
+	return r[l-RECORD_TOTAL_HEADER_SZ-int(r.ValueLen()) : l-RECORD_TOTAL_HEADER_SZ]
 }
 
 func (r Record) KeyLen() uint16 {
-	l := len(r.m)
-	return binary.LittleEndian.Uint16(r.m[l-RECORD_TOTAL_HEADER_SZ:])
+	l := len(r)
+	return binary.LittleEndian.Uint16(r[l-RECORD_TOTAL_HEADER_SZ:])
 }
 
 func (r Record) ValueLen() uint16 {
-	l := len(r.m)
-	return binary.LittleEndian.Uint16(r.m[l-RECORD_VAL_LEN_SZ:])
+	l := len(r)
+	return binary.LittleEndian.Uint16(r[l-RECORD_VAL_LEN_SZ:])
 }
 
 func (r Record) Write(key, value string) {
 	keyLen := uint16(len(key))
 	valueLen := uint16(len(value))
 	total := valueLen + keyLen
-	copy(r.m[:], key)
-	copy(r.m[keyLen:], value)
-	binary.LittleEndian.PutUint16(r.m[total:], keyLen)
-	binary.LittleEndian.PutUint16(r.m[total+RECORD_KEY_LEN_SZ:], valueLen)
+	copy(r[:], key)
+	copy(r[keyLen:], value)
+	binary.LittleEndian.PutUint16(r[total:], keyLen)
+	binary.LittleEndian.PutUint16(r[total+RECORD_KEY_LEN_SZ:], valueLen)
 }

@@ -16,7 +16,7 @@ func (it *PageIterator) HasNext() bool {
 }
 
 func (it *PageIterator) Next() record.Record {
-    br := record.RecordFrom(it.p.m[:it.current])
+    br := record.RecordFrom(it.p[:it.current])
     it.current -= (uint(record.RECORD_TOTAL_HEADER_SZ) + uint(br.KeyLen() + br.ValueLen())) 
     return br
 }
