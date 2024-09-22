@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/arsnazarenko/go-hashdb/hashdb/record"
 	"github.com/arsnazarenko/go-hashdb/hashdb/util"
@@ -20,8 +21,8 @@ const (
 	PAGE_LOCAL_DEPTH_OFFSET = 4092
 )
 
-var errKeyNotFound error = errors.New("page.Get: key not found")
-var errPageIsFull error = errors.New("page.Put: page is full")
+var errKeyNotFound error = errors.New("key not found")
+var errPageIsFull error = errors.New("page is full")
 
 type Page []byte
 
@@ -49,10 +50,7 @@ func (p Page) setLd(ld uint16) {
 }
 
 func (p Page) Get(key string) (string, error) {
-	it := PageIterator{
-		p:       p,
-		current: p.Use(),
-	}
+    it := NewPageIterator(p, p.Use())
 	keyLen := uint16(len(key))
 	for it.HasNext() {
 		r := it.Next()
@@ -62,7 +60,7 @@ func (p Page) Get(key string) (string, error) {
 			}
 		}
 	}
-	return "", errKeyNotFound
+    return "", fmt.Errorf("page.Get: %w",  errKeyNotFound)
 }
 
 func (p Page) Put(key, value string) error {
@@ -75,17 +73,14 @@ func (p Page) Put(key, value string) error {
 		binary.LittleEndian.PutUint16(p[PAGE_USE_OFFSET:], uint16(use+payload))
 		return nil
 	}
-	return errPageIsFull
+    return fmt.Errorf("page.Put: %w", errPageIsFull)
 }
 
 func (p Page) Gc() Page {
 	tmp := PageFrom(make([]byte, PAGE_SIZE))
 	tmp.setLd(uint16(p.ld()))
 	lookup := make(map[string]bool)
-	it := &PageIterator{
-		p:       p,
-		current: p.Use(),
-	}
+    it := NewPageIterator(p, p.Use())
 	for it.HasNext() {
 		r := it.Next()
 		k := string(r.Key())
