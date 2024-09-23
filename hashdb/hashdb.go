@@ -6,6 +6,10 @@ type HashDb struct {
 	// TODO:
 }
 
+func Open(path string) (*HashDb, error) {
+    panic("unimplemented")
+}
+
 // Close implements DB.
 func (h *HashDb) Close() error {
 	panic("unimplemented")

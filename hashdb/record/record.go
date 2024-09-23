@@ -24,13 +24,16 @@ const (
 type Record []byte
 
 func RecordFrom(mem []byte) Record {
-    util.Assert(len(mem) > RECORD_TOTAL_HEADER_SZ, "record.RecordFrom: len of underlying memory of Record should be greater than Record header size")
-	return Record(mem)
+	r := Record(mem)
+	util.Assert(
+		(int(r.KeyLen()+r.ValueLen())+RECORD_TOTAL_HEADER_SZ) <= len(mem),
+		"record.RecordFrom: underlying memory less than required Record memory size")
+	return r
 }
 
 func (r Record) Key() []byte {
 	l := len(r)
-	key_start_idx := l - RECORD_TOTAL_HEADER_SZ - int(r.ValueLen()) - int(r.KeyLen())
+	key_start_idx := l - RECORD_TOTAL_HEADER_SZ - int(r.ValueLen()+r.KeyLen())
 	key_end_idx := l - RECORD_TOTAL_HEADER_SZ - int(r.ValueLen())
 	return r[key_start_idx:key_end_idx]
 }
@@ -50,7 +53,7 @@ func (r Record) ValueLen() uint16 {
 	return binary.LittleEndian.Uint16(r[l-RECORD_VAL_LEN_SZ:])
 }
 
-func (r Record) Write(key, value string) {
+func (r Record) Write(key, value []byte) {
 	keyLen := uint16(len(key))
 	valueLen := uint16(len(value))
 	total := valueLen + keyLen

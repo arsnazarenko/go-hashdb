@@ -37,11 +37,9 @@ func (p Page) Use() uint {
 	return uint(binary.LittleEndian.Uint16(p[PAGE_USE_OFFSET:]))
 }
 
-func (p Page) rest() uint {
-	return PAGE_LOCAL_DEPTH_OFFSET - p.Use()
-}
 
-func (p Page) ld() uint {
+
+func (p Page) Ld() uint {
 	return uint(binary.LittleEndian.Uint16(p[PAGE_LOCAL_DEPTH_OFFSET:]))
 }
 
@@ -49,48 +47,60 @@ func (p Page) setLd(ld uint16) {
 	binary.LittleEndian.PutUint16(p[PAGE_LOCAL_DEPTH_OFFSET:], ld)
 }
 
-func (p Page) Get(key string) (string, error) {
-    it := NewPageIterator(p, p.Use())
+func (p Page) setUse(use uint16) {
+    util.Assert(p.Use() <= PAGE_LOCAL_DEPTH_OFFSET, "page.PageFrom: max len of page payload is 4092")
+	binary.LittleEndian.PutUint16(p[PAGE_USE_OFFSET:], use)
+}
+func (p Page) Reset(use uint16) {
+    p.setLd(0)
+    p.setUse(0)
+}
+
+func (p Page) Get(key []byte) ([]byte, error) {
 	keyLen := uint16(len(key))
-	for it.HasNext() {
-		r := it.Next()
+    it := NewPageIterator(p, p.Use())
+    for i := it; it.HasNext(); i.Next() {
+		r := i.Get()
 		if keyLen == r.KeyLen() {
 			if bytes.Compare(r.Key(), []byte(key)) == 0 {
-				return string(r.Value()), nil
+				return r.Value(), nil
 			}
 		}
 	}
-    return "", fmt.Errorf("page.Get: %w",  errKeyNotFound)
+    return nil, fmt.Errorf("page.Get: %w",  errKeyNotFound)
 }
 
-func (p Page) Put(key, value string) error {
+func (p Page) Put(key, value []byte) error {
     // TODO: add checking for the same {key, value}. In this case we can ommit put operation
 	payload := uint(len(key) + len(value) + record.RECORD_TOTAL_HEADER_SZ)
 	if p.rest() >= payload {
 		use := p.Use()
-		r := record.RecordFrom(p[use : use+payload])
+		r := record.Record(p[use : use+payload]) // not use RecordFrom, because Put does not validate this memory
 		r.Write(key, value)
 		binary.LittleEndian.PutUint16(p[PAGE_USE_OFFSET:], uint16(use+payload))
 		return nil
 	}
     return fmt.Errorf("page.Put: %w", errPageIsFull)
 }
-
-func (p Page) Gc() Page {
-	tmp := PageFrom(make([]byte, PAGE_SIZE))
-	tmp.setLd(uint16(p.ld()))
-	lookup := make(map[string]bool)
+// like compaction, delete older versions of updated k,v
+func (p Page) Gc() {
+	tmpUniqueKV := make(map[string][]byte)
     it := NewPageIterator(p, p.Use())
-	for it.HasNext() {
-		r := it.Next()
+    for i := it; it.HasNext(); it.Next() {
+		r := i.Get()
 		k := string(r.Key())
-		if _, ok := lookup[k]; !ok {
-			lookup[k] = true
-			tmp.Put(k, string(r.Value()))
+		if _, ok := tmpUniqueKV[k]; !ok {
+			tmpUniqueKV[k] = append([]byte(nil), r.Value()...)
 		} else {
 			continue
 		}
-
 	}
-	return tmp
+    p.setUse(0)
+    for k, v := range tmpUniqueKV {
+        p.Put([]byte(k), v)
+    }
+}
+
+func (p Page) rest() uint {
+	return PAGE_LOCAL_DEPTH_OFFSET - p.Use()
 }

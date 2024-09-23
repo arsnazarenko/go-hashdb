@@ -73,8 +73,9 @@ func (d *Directory) increaseSize() error {
 func (d *Directory) split(p page.Page) (page.Page, page.Page) {
     p1 := make([]byte, page.PAGE_SIZE)
     p2 := make([]byte, page.PAGE_SIZE)
-    t := page.NewPageIterator(p, p.Use())
-    _ = t  
+    for i := page.NewPageIterator(p, p.Use()); i.HasNext(); i.Next() {
+        
+    }
     // IMPLEMENT 
     return p1, p2
 }
