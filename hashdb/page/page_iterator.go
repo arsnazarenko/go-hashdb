@@ -16,7 +16,7 @@ func NewPageIterator(p Page, current uint) *PageIterator {
 }
 
 func (it *PageIterator) HasNext() bool {
-	if record.RECORD_TOTAL_HEADER_SZ < it.current && it.current <= it.p.Use() {
+	if record.RECORD_TOTAL_HEADER_SZ <= it.current && it.current <= it.p.Use() {
 		return true
 	}
 	return false
