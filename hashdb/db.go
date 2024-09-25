@@ -1,6 +1,5 @@
 package hashdb
 
-
 type DB interface {
 	Close() error
 	Put(key, value []byte) error
@@ -8,4 +7,3 @@ type DB interface {
 	// TODO: Iterate()
 	// TODO: DebugPrint()
 }
-

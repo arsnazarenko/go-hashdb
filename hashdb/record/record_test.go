@@ -22,19 +22,19 @@ func Test(t *testing.T) {
 }
 
 func TestByteRecordFrom(t *testing.T) {
-   t.Run("Create record from mem with invalid header", func(t *testing.T) {
-       require.Panics(t, func(){RecordFrom(invalidHeaderMem[:])})
-   }) 
-   t.Run("Create record from zero len slice", func(t *testing.T) {
-       require.Panics(t, func(){RecordFrom([]byte{})})
-   }) 
-   t.Run("Create record from mem zero key and value", func(t *testing.T) {
-       r := RecordFrom(ZeroKeyValueMem[:])
-       require.Equal(t, uint16(0), r.KeyLen())
-       require.Equal(t, uint16(0), r.KeyLen())
-       require.Equal(t, []byte{}, r.Key())
-       require.Equal(t, []byte{}, r.Value())
-   }) 
+	t.Run("Create record from mem with invalid header", func(t *testing.T) {
+		require.Panics(t, func() { RecordFrom(invalidHeaderMem[:]) })
+	})
+	t.Run("Create record from zero len slice", func(t *testing.T) {
+		require.Panics(t, func() { RecordFrom([]byte{}) })
+	})
+	t.Run("Create record from mem zero key and value", func(t *testing.T) {
+		r := RecordFrom(ZeroKeyValueMem[:])
+		require.Equal(t, uint16(0), r.KeyLen())
+		require.Equal(t, uint16(0), r.KeyLen())
+		require.Equal(t, []byte{}, r.Key())
+		require.Equal(t, []byte{}, r.Value())
+	})
 }
 
 func TestByteRecord(t *testing.T) {

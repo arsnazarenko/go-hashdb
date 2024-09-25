@@ -9,8 +9,9 @@ type PageIterator struct {
 	p       Page
 	current uint
 }
+
 func NewPageIterator(p Page, current uint) *PageIterator {
-    util.Assert(current <= PAGE_LOCAL_DEPTH_OFFSET, "position should be less than max page payload size")
+	util.Assert(current <= PAGE_LOCAL_DEPTH_OFFSET, "position should be less than max page payload size")
 
 	return &PageIterator{p: p, current: current}
 }

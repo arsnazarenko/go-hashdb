@@ -46,7 +46,7 @@ func TestPagePut(t *testing.T) {
 		p := PageFrom(m)
 		k, v := []byte("Hello"), []byte("world")
 		err := p.Put(k, v)
-		require.ErrorIs(t, errPageIsFull, errors.Unwrap(err))
+		require.ErrorIs(t, ErrPageIsFull, errors.Unwrap(err))
 
 	})
 	t.Run("Put value with same key full Page", func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestPagePut(t *testing.T) {
 	t.Run("Put key and value with zero len", func(t *testing.T) {
 		m := make([]byte, 4096)
 		p := PageFrom(m)
-		for range (PAGE_LOCAL_DEPTH_OFFSET / record.RECORD_TOTAL_HEADER_SZ) {
+		for range PAGE_LOCAL_DEPTH_OFFSET / record.RECORD_TOTAL_HEADER_SZ {
 			_ = p.Put([]byte{}, []byte{})
 		}
 		cnt := 0
@@ -86,7 +86,7 @@ func TestPageGet(t *testing.T) {
 		p := PageFrom(m)
 		k := []byte("Hello")
 		_, err := p.Get(k)
-		require.ErrorIs(t, errKeyNotFound, errors.Unwrap(err))
+		require.ErrorIs(t, ErrKeyNotFound, errors.Unwrap(err))
 	})
 }
 func TestPageGc(t *testing.T) {
@@ -97,9 +97,9 @@ func TestPageGc(t *testing.T) {
 	for _, v := range vals {
 		p.Put(k, v)
 	}
-	p.Gc()
-	require.Equal(t, p.Use(), uint(len(k)+len(vals[len(vals)-1])+record.RECORD_TOTAL_HEADER_SZ))
-	v, err := p.Get(k)
+	cleaned := p.Gc()
+	require.Equal(t, cleaned.Use(), uint(len(k)+len(vals[len(vals)-1])+record.RECORD_TOTAL_HEADER_SZ))
+	v, err := cleaned.Get(k)
 	require.Nil(t, err)
 	require.Equal(t, v, vals[len(vals)-1])
 }
@@ -118,7 +118,7 @@ func TestPutScenarios(t *testing.T) {
 			require.Equal(t, uint(0), p.Use())
 			require.Equal(t, uint(0), p.Ld())
 			require.Equal(t, uint(PAGE_LOCAL_DEPTH_OFFSET), p.rest())
-			p.setLd(2)
+			p.SetLd(2)
 			require.Equal(t, uint(2), p.Ld())
 			totalLen := 0
 			for _, i := range tt.values {

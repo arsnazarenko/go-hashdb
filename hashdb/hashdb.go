@@ -1,27 +1,26 @@
 package hashdb
 
-var _ DB = (*HashDb)(nil)
+var _ DB = (*hashDb)(nil)
 
-type HashDb struct {
+type hashDb struct {
 	// TODO:
 }
 
-func Open(path string) (*HashDb, error) {
-    panic("unimplemented")
+func Open(path string) (DB, error) {
+	return nil, nil
 }
 
 // Close implements DB.
-func (h *HashDb) Close() error {
+func (h *hashDb) Close() error {
 	panic("unimplemented")
 }
 
 // Get implements DB.
-func (h *HashDb) Get(key []byte) ([]byte, error) {
+func (h *hashDb) Get(key []byte) ([]byte, error) {
 	panic("unimplemented")
 }
 
 // Put implements DB.
-func (h *HashDb) Put(key []byte, value []byte) error {
+func (h *hashDb) Put(key []byte, value []byte) error {
 	panic("unimplemented")
 }
-
