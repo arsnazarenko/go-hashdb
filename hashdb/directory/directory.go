@@ -1,26 +1,27 @@
 package directory
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"hash/fnv"
-	"os"
-	"syscall"
 
+	"github.com/arsnazarenko/go-hashdb/hashdb/disk"
 	"github.com/arsnazarenko/go-hashdb/hashdb/page"
 	"github.com/arsnazarenko/go-hashdb/hashdb/util"
-	"github.com/edsrzf/mmap-go"
 )
 
 var errHashOutOfTheDirTable = errors.New("hash value out of page id's list")
 var offsetOutOfTheData = errors.New("page offset out of data file")
 
+type Meta struct {
+	Table      []int // page id's. use signed int for special error id -1
+	Gd         uint  // global depth
+	LastPageId int   // last page id
+}
 type Directory struct {
-	Table      []int     // page id's. use signed int for special error id -1
-	data       mmap.MMap // memory mapped buffer buffer
-	gd         uint      // global depth
-	dataFile   *os.File  // mmap file
-	LastPageId int       // last page id
+	Meta Meta
+	DM   disk.DiskManager
 }
 
 func hash(key []byte) uint {
@@ -30,53 +31,40 @@ func hash(key []byte) uint {
 }
 
 func (d *Directory) extHash(key []byte) uint {
-	return hash(key) & ((1 << d.gd) - 1)
+	return hash(key) & ((1 << d.Meta.Gd) - 1)
 }
 
 // return Page with PageId or Error
 func (d *Directory) getPage(key []byte) (page.Page, int, error) {
 	hash := d.extHash(key)
-	if hash > uint(len(d.Table)-1) { // len of Table always >= 1
+	if hash > uint(len(d.Meta.Table)-1) { // len of Table always >= 1
 		return nil, -1, fmt.Errorf("directory.getPage: %w", errHashOutOfTheDirTable)
 	}
-	id := d.Table[hash]
+	id := d.Meta.Table[hash]
 	offset := id * page.PAGE_SIZE
 
-	if offset+page.PAGE_SIZE > len(d.data) {
+	if offset+page.PAGE_SIZE > len(d.DM.Memory()) {
 		return nil, -1, fmt.Errorf("directory.GetPage: %w", offsetOutOfTheData)
 	}
-	return page.PageFrom(d.data[offset : offset+page.PAGE_SIZE]), id, nil
+	return page.PageFrom(d.DM.Memory()[offset : offset+page.PAGE_SIZE]), id, nil
 }
 
 func (d *Directory) Get(key []byte) ([]byte, error) {
 	p, _, err := d.getPage(key)
-	return p, err
+    if err != nil {
+        return nil, err
+    }
+
+	return p.Get(key)
 }
 
 func (d *Directory) expand() {
-	d.Table = append(d.Table, d.Table...)
-	d.gd++
-}
-
-func (d *Directory) increaseSize() error {
-	stats, err := d.dataFile.Stat()
-	if err != nil {
-		return fmt.Errorf("directory.increaseSize: %w", err)
-	}
-	size := stats.Size()
-	n, err := d.dataFile.WriteAt(make([]byte, size), int64(size)) // x2 increase of dataFile
-	if int64(n) < size || err != nil {
-		return fmt.Errorf("directory.increaseSize: %w", err)
-	}
-	// remap increased file in RAM
-	if err := d.mmapDataFile(); err != nil {
-		return fmt.Errorf("directory.increaseSize: %w", err)
-	}
-	return nil
+	d.Meta.Table = append(d.Meta.Table, d.Meta.Table...)
+	d.Meta.Gd++
 }
 
 func (d *Directory) split(p page.Page) (page.Page, page.Page) {
-	util.Assert(p.Ld() < d.gd, "Local depth of splited page should be less than director")
+	util.Assert(p.Ld() < d.Meta.Gd, "Local depth of splited page should be less than director")
 	p1 := page.PageFrom(make([]byte, page.PAGE_SIZE))
 	p2 := page.PageFrom(make([]byte, page.PAGE_SIZE))
 	for i := page.NewPageIterator(p, p.Use()); i.HasNext(); i.Next() {
@@ -92,15 +80,15 @@ func (d *Directory) split(p page.Page) (page.Page, page.Page) {
 }
 
 func (d *Directory) nextPageId() int {
-	d.LastPageId++
-	return d.LastPageId
+	d.Meta.LastPageId++
+	return d.Meta.LastPageId
 }
 
 func (d *Directory) replace(splitedPageId int, ld uint) (int, int) {
 	newPageId := d.nextPageId()
-	for i := 0; i < len(d.Table); i++ {
-		if d.Table[i] == splitedPageId && ((i>>ld)&0x1) == 1 {
-			d.Table[i] = newPageId
+	for i := 0; i < len(d.Meta.Table); i++ {
+		if d.Meta.Table[i] == splitedPageId && ((i>>ld)&0x1) == 1 {
+			d.Meta.Table[i] = newPageId
 		}
 	}
 	return splitedPageId, newPageId
@@ -120,29 +108,30 @@ func (d *Directory) put(key, value []byte) error {
 		cleaned := p.Gc()
 		err := cleaned.Put(key, value)
 		if err == nil {
-			copy(d.data[id*page.PAGE_SIZE:(id*page.PAGE_SIZE)+page.PAGE_SIZE], cleaned)
+			copy(d.DM.Memory()[id*page.PAGE_SIZE:(id*page.PAGE_SIZE)+page.PAGE_SIZE], cleaned)
 			return nil
 		}
 		if !errors.Is(err, page.ErrPageIsFull) {
 			return fmt.Errorf("directory.Put: %w", err)
 		}
-		dirCopy := *d
-		if p.Ld() == dirCopy.gd {
-			dirCopy.expand()
+		oldMeta := d.Meta
+		if p.Ld() == d.Meta.Gd {
+			d.expand()
 		}
-		if p.Ld() < dirCopy.gd {
-			splPage, newPage := dirCopy.split(cleaned)
-			splId, newId := dirCopy.replace(id, p.Ld())
+		if p.Ld() < d.Meta.Gd {
+			splPage, newPage := d.split(cleaned)
+			splId, newId := d.replace(id, p.Ld())
 			splPage.SetLd(uint16(p.Ld()) + 1)
 			newPage.SetLd(uint16(p.Ld()) + 1)
-			if newId*page.PAGE_SIZE >= len(dirCopy.data) {
-				if err := dirCopy.increaseSize(); err != nil {
+			if newId*page.PAGE_SIZE >= len(d.DM.Memory()) {
+				if err := d.DM.IncreaseSize(); err != nil {
+                    // failed to increase => restore old meta
+                    d.Meta = oldMeta
 					return fmt.Errorf("directory.Put: %w", err)
 				}
-				*d = dirCopy
 			}
-			copy(d.data[splId*page.PAGE_SIZE:splId*page.PAGE_SIZE+page.PAGE_SIZE], splPage)
-			copy(d.data[newId*page.PAGE_SIZE:newId*page.PAGE_SIZE+page.PAGE_SIZE], newPage)
+			copy(d.DM.Memory()[splId*page.PAGE_SIZE:splId*page.PAGE_SIZE+page.PAGE_SIZE], splPage)
+			copy(d.DM.Memory()[newId*page.PAGE_SIZE:newId*page.PAGE_SIZE+page.PAGE_SIZE], newPage)
 			d.put(key, value)
 		}
 
@@ -151,21 +140,28 @@ func (d *Directory) put(key, value []byte) error {
 	return nil
 }
 
+func (d *Directory) getPageById(id int) page.Page {
+    util.Assert(id <= d.Meta.LastPageId, "Invalid page id")
+    return page.PageFrom(d.DM.Memory()[id * page.PAGE_SIZE:id * page.PAGE_SIZE + page.PAGE_SIZE])
+
+}
 func (d *Directory) Put(key, value []byte) error {
 	err := d.put(key, value)
 	if err != nil {
 		return err
 	}
-	d.data.Flush()
+	d.DM.Flush()
 	return nil
 }
 
-func (d *Directory) mmapDataFile() error {
-	d.data.Unmap()
-	data, err := mmap.Map(d.dataFile, mmap.RDWR|syscall.MAP_POPULATE, 0644)
-	if err != nil {
-		return fmt.Errorf("directory.mmapDataFile: %w", err)
-	}
-	d.data = data
-	return nil
+func (d *Directory) String() string {
+
+    b := bytes.NewBuffer(make([]byte, 0)) 
+    b.WriteString(fmt.Sprintf("Gd: %d, Table: %v\n", d.Meta.Gd, d.Meta.Table))
+    for i := 0; i <= d.Meta.LastPageId; i++ {
+        b.WriteString(fmt.Sprintf("Page %d:\n", i))
+        p := d.getPageById(i)
+        b.WriteString(p.String() + "\n")
+    }
+    return b.String()
 }

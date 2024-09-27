@@ -62,3 +62,7 @@ func (r Record) Write(key, value []byte) {
 	binary.LittleEndian.PutUint16(r[total:], keyLen)
 	binary.LittleEndian.PutUint16(r[total+RECORD_KEY_LEN_SZ:], valueLen)
 }
+
+func (r Record) String() string {
+	return "{ " + string(r.Key()) + ", " + string(r.Value()) + " }"
+}

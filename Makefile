@@ -3,7 +3,7 @@ TARGET = $(TARGET_DIR)/main
 
 all: run
 
-$(TARGET): cmd/main.go
+$(TARGET): ./cmd/main.go
 	go build -o $@ $^ 
 
 build: $(TARGET)

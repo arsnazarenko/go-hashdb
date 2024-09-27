@@ -16,8 +16,8 @@ type GenericHashDb[K Serializable, V Serializable] struct {
 	hashdb hashDb
 }
 
-func (g *GenericHashDb[K, V]) Close() error {
-	return g.hashdb.Close()
+func (g *GenericHashDb[K, V]) Close() {
+	g.hashdb.Close()
 }
 func (g *GenericHashDb[K, V]) Put(key K, value V) error {
 	return g.hashdb.Put(key.Serialize(), value.Serialize())

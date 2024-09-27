@@ -97,3 +97,19 @@ func (p Page) Gc() Page {
 func (p Page) rest() uint {
 	return PAGE_LOCAL_DEPTH_OFFSET - p.Use()
 }
+
+func (p Page) String() string {
+	b := bytes.NewBufferString("[")
+	cnt := 0
+	for it := NewPageIterator(p, p.Use()); it.HasNext(); it.Next() {
+		if cnt > 60 {
+			b.WriteString("\n")
+			cnt = 0
+		}
+		str := it.Get().String() + " "
+		b.WriteString(str)
+		cnt += len(str)
+	}
+	b.WriteString("]\n" + fmt.Sprintf("ld: %d, use: %d", p.Ld(), p.Use()))
+	return b.String()
+}
