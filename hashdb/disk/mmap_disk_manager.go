@@ -26,9 +26,16 @@ func NewMmapDiskManager(f *os.File) (DiskManager, error) {
 
 // Close implements DiskManager.
 func (m *mmapDiskManager) Close() error {
-	m.Flush()
-    m.data.Unmap()
-    m.dataFile.Close()
+    if err := m.Flush(); err != nil {
+		return fmt.Errorf("mmapDiskManager.Close: %w", err)
+    }
+    
+    if err := m.data.Unmap(); err != nil {
+		return fmt.Errorf("mmapDiskManager.Close: %w", err)
+    }
+    if err := m.dataFile.Close(); err != nil {
+		return fmt.Errorf("mmapDiskManager.Close: %w", err)
+    }
 	return nil
 }
 

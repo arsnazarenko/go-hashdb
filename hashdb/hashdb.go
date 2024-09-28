@@ -75,18 +75,22 @@ func Open(path string) (DB, error) {
 
 
 // Close implements DB.
-func (h *hashDb) Close() {
-    h.dir.DM.Close()
+func (h *hashDb) Close() error {
+    if err := h.dir.DM.Close(); err != nil {
+		return fmt.Errorf("hashdb.Close: %w", err)
+    }
 
     metaFile, err := os.OpenFile(filepath.Join(h.path, META_FILE_NAME), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
     defer metaFile.Close()
     if err != nil {
-       panic(err)
+		return fmt.Errorf("hashdb.Close: %w", err)
     }
-    _, err = metaFile.WriteAt(encodeMeta(h.dir.Meta).Bytes(), 0)
-    if err != nil {
-        panic(err)
+    metaRaw := encodeMeta(h.dir.Meta).Bytes()
+    wr, err := metaFile.WriteAt(metaRaw, 0)
+    if err != nil || wr != len(metaRaw) {
+		return fmt.Errorf("hashdb.Close: %w", err)
     }
+    return nil
 }
 
 // Get implements DB.

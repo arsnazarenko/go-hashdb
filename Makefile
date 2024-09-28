@@ -1,6 +1,6 @@
 TARGET_DIR = build
 TARGET = $(TARGET_DIR)/main
-
+BENCH_DIR = $(shell pwd)/bench
 all: run
 
 $(TARGET): ./cmd/main.go
@@ -14,7 +14,9 @@ run: build
 test:
 	go test -v ./...
 
+bench:
+	go test -bench=. $(BENCH_DIR) -benchmem -benchtime=100000x
 clean:
 	@rm -rf $(TARGET_DIR) 
 
-.PHONY: all build clean test run
+.PHONY: all build clean test run bench
