@@ -7,10 +7,10 @@ import (
 
 func BenchmarkGetValue(b *testing.B) {
 	valueSets := map[string][]byte{
-		"empty":   []byte(""),
-		"small":  generateValue(12),
-		"medium": generateValue(128),
-		"large":  generateValue(512),
+		"64B":  generateValue(64),
+		"128B": generateValue(128),
+		"256B": generateValue(256),
+		"512B":  generateValue(512),
 	}
 	for key, value := range valueSets {
 		b.Run(key, func(b *testing.B) {
