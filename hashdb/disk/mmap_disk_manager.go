@@ -16,26 +16,26 @@ type mmapDiskManager struct {
 }
 
 func NewMmapDiskManager(f *os.File) (DiskManager, error) {
-    var m mmapDiskManager
-    m.dataFile = f
-    if err := m.mmapDataFile(); err != nil {
+	var m mmapDiskManager
+	m.dataFile = f
+	if err := m.mmapDataFile(); err != nil {
 		return nil, fmt.Errorf("mmapDiskManager.New: %w", err)
-    }
-    return &m, nil
+	}
+	return &m, nil
 }
 
 // Close implements DiskManager.
 func (m *mmapDiskManager) Close() error {
-    if err := m.Flush(); err != nil {
+	if err := m.Flush(); err != nil {
 		return fmt.Errorf("mmapDiskManager.Close: %w", err)
-    }
-    
-    if err := m.data.Unmap(); err != nil {
+	}
+
+	if err := m.data.Unmap(); err != nil {
 		return fmt.Errorf("mmapDiskManager.Close: %w", err)
-    }
-    if err := m.dataFile.Close(); err != nil {
+	}
+	if err := m.dataFile.Close(); err != nil {
 		return fmt.Errorf("mmapDiskManager.Close: %w", err)
-    }
+	}
 	return nil
 }
 

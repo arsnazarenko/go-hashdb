@@ -15,7 +15,7 @@ make bench
 ```
 make run
 ```
-### Roadmap
+## ✅Roadmap
 * [ ] Add debug print functions (with Stringer) for hashdb 
 * [ ] Errors 
 * [ ] Update metdata file after each completed `Put` operation for durabilty (current impl update metadata file only after `Close()`)
