@@ -41,7 +41,7 @@ func open() {
 
 func openAndFill(count int, value []byte) {
 	open()
-	for i := 0; i < count; i++ {
+	for i := range count {
 		if err := db.Put([]byte(fmt.Sprintf("key_%d", i)), value); err != nil {
 			panic(err)
 		}

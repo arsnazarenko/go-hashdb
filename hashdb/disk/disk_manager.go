@@ -6,4 +6,3 @@ type DiskManager interface {
 	Flush() error
 	Close() error
 }
-

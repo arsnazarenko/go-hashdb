@@ -17,7 +17,7 @@ import (
 */
 const (
 	RECORD_VAL_LEN_SZ      = 2                                     // Size of the value len in record header
-	RECORD_KEY_LEN_SZ      = 2                                     // Size of the value len in record header
+	RECORD_KEY_LEN_SZ      = 2                                     // Size of the key len in record header
 	RECORD_TOTAL_HEADER_SZ = RECORD_KEY_LEN_SZ + RECORD_VAL_LEN_SZ // Total size of the record header
 )
 

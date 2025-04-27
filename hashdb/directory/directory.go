@@ -51,9 +51,9 @@ func (d *Directory) getPage(key []byte) (page.Page, int, error) {
 
 func (d *Directory) Get(key []byte) ([]byte, error) {
 	p, _, err := d.getPage(key)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	return p.Get(key)
 }
@@ -86,7 +86,7 @@ func (d *Directory) nextPageId() int {
 
 func (d *Directory) replace(splitedPageId int, ld uint) (int, int) {
 	newPageId := d.nextPageId()
-	for i := 0; i < len(d.Meta.Table); i++ {
+	for i := range d.Meta.Table {
 		if d.Meta.Table[i] == splitedPageId && ((i>>ld)&0x1) == 1 {
 			d.Meta.Table[i] = newPageId
 		}
@@ -125,8 +125,8 @@ func (d *Directory) put(key, value []byte) error {
 			newPage.SetLd(uint16(p.Ld()) + 1)
 			if newId*page.PAGE_SIZE >= len(d.DM.Memory()) {
 				if err := d.DM.IncreaseSize(); err != nil {
-                    // failed to increase => restore old meta
-                    d.Meta = oldMeta
+					// failed to increase => restore old meta
+					d.Meta = oldMeta
 					return fmt.Errorf("directory.Put: %w", err)
 				}
 			}
@@ -141,8 +141,8 @@ func (d *Directory) put(key, value []byte) error {
 }
 
 func (d *Directory) getPageById(id int) page.Page {
-    util.Assert(id <= d.Meta.LastPageId, "Invalid page id")
-    return page.PageFrom(d.DM.Memory()[id * page.PAGE_SIZE:id * page.PAGE_SIZE + page.PAGE_SIZE])
+	util.Assert(id <= d.Meta.LastPageId, "Invalid page id")
+	return page.PageFrom(d.DM.Memory()[id*page.PAGE_SIZE : id*page.PAGE_SIZE+page.PAGE_SIZE])
 
 }
 func (d *Directory) Put(key, value []byte) error {
@@ -156,12 +156,12 @@ func (d *Directory) Put(key, value []byte) error {
 
 func (d *Directory) String() string {
 
-    b := bytes.NewBuffer(make([]byte, 0)) 
-    b.WriteString(fmt.Sprintf("Gd: %d, Table: %v\n", d.Meta.Gd, d.Meta.Table))
-    for i := 0; i <= d.Meta.LastPageId; i++ {
-        b.WriteString(fmt.Sprintf("Page %d:\n", i))
-        p := d.getPageById(i)
-        b.WriteString(p.String() + "\n")
-    }
-    return b.String()
+	b := bytes.NewBuffer(make([]byte, 0))
+	b.WriteString(fmt.Sprintf("Gd: %d, Table: %v\n", d.Meta.Gd, d.Meta.Table))
+	for i := 0; i <= d.Meta.LastPageId; i++ {
+		b.WriteString(fmt.Sprintf("Page %d:\n", i))
+		p := d.getPageById(i)
+		b.WriteString(p.String() + "\n")
+	}
+	return b.String()
 }
