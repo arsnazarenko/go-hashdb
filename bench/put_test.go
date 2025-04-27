@@ -10,7 +10,7 @@ func BenchmarkPutValue(b *testing.B) {
 		"64B":  generateValue(64),
 		"128B": generateValue(128),
 		"256B": generateValue(256),
-		"512B":  generateValue(512),
+		"512B": generateValue(512),
 	}
 	for key, value := range valueSets {
 		b.Run(key, func(b *testing.B) {

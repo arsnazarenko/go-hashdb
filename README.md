@@ -15,12 +15,14 @@ make bench
 ```
 make run
 ```
-### Roadmap
-* [ ] Add debug print functions (with Stringer) for hashdb 
+## ✅Roadmap
 * [ ] Errors 
 * [ ] Update metdata file after each completed `Put` operation for durabilty (current impl update metadata file only after `Close()`)
 * [ ] Impl ThreadSafe hashdb impl with `RWLock`
 * [ ] Add generic hashdb with support for custom key and value types
+* [ ] CI
+* [ ] Linters
+* [ ] GRPC/REST/CLI interfaces
 
 
 
